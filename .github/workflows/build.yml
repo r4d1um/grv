@@ -37,16 +37,17 @@ jobs:
 
       - name: Prepare legacy GOPATH workspace
         run: |
-          mkdir -p "$GOPATH/src/github.com/rgburke"
-          cp -a "$GITHUB_WORKSPACE" "$GOPATH/src/github.com/rgburke/grv"
+          GOPATH_DIR="$(go env GOPATH)"
+          mkdir -p "$GOPATH_DIR/src/github.com/rgburke"
+          cp -a "$GITHUB_WORKSPACE" "$GOPATH_DIR/src/github.com/rgburke/grv"
 
       - name: Build and test
         run: |
-          cd "$GOPATH/src/github.com/rgburke/grv"
+          cd "$(go env GOPATH)/src/github.com/rgburke/grv"
           make test
 
       - name: Build static binary
         run: |
-          cd "$GOPATH/src/github.com/rgburke/grv"
+          cd "$(go env GOPATH)/src/github.com/rgburke/grv"
           make clean
           make static
