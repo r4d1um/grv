@@ -21,6 +21,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 1.13.15
+          cache: false
 
       - name: Install native dependencies
         run: |
@@ -34,10 +35,18 @@ jobs:
             libreadline-dev \
             libgpm-dev
 
+      - name: Prepare legacy GOPATH workspace
+        run: |
+          mkdir -p "$GOPATH/src/github.com/rgburke"
+          cp -a "$GITHUB_WORKSPACE" "$GOPATH/src/github.com/rgburke/grv"
+
       - name: Build and test
-        run: make test
+        run: |
+          cd "$GOPATH/src/github.com/rgburke/grv"
+          make test
 
       - name: Build static binary
         run: |
+          cd "$GOPATH/src/github.com/rgburke/grv"
           make clean
           make static
