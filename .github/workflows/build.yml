@@ -41,10 +41,12 @@ jobs:
           mkdir -p "$GOPATH_DIR/src/github.com/rgburke"
           cp -a "$GITHUB_WORKSPACE" "$GOPATH_DIR/src/github.com/rgburke/grv"
 
-      - name: Build and test
+      - name: Build, generate docs and test
         run: |
           cd "$(go env GOPATH)/src/github.com/rgburke/grv"
-          make test
+          make grv
+          make doc
+          go test --tags static ./cmd/grv
 
       - name: Build static binary
         run: |
