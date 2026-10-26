@@ -54,14 +54,18 @@ rm -rf "$SRC_DIR/build"
 mkdir -p "$SRC_DIR/build"
 cd "$SRC_DIR/build"
 
-# CMAKE_POLICY_VERSION_MINIMUM lets CMake >= 4 configure this older project.
+# CMAKE_POLICY_VERSION_MINIMUM lets CMake >= 4 configure this older project,
+# and the -Wno-*/--no-warn-unused-cli flags silence warnings about its outdated
+# CMake setup (older CMake versions also don't know the policy variable).
 # Network transports are disabled: grv only uses libgit2 to read local
 # repositories and shells out to git for anything touching a remote.
 cmake \
+	-Wno-dev \
+	-Wno-deprecated \
+	--no-warn-unused-cli \
 	-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
 	-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 	-DCMAKE_INSTALL_PREFIX="$PREFIX" \
-	-DCMAKE_INSTALL_LIBDIR=lib \
 	-DCMAKE_C_FLAGS="-fPIC -w" \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DBUILD_CLAR=OFF \
