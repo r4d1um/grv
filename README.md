@@ -1,4 +1,4 @@
-# GRV - Git Repository Viewer [![Build](https://github.com/r4d1um/grv/actions/workflows/build.yml/badge.svg)](https://github.com/r4d1um/grv/actions/workflows/build.yml)
+# GRV - Git Repository Viewer [![Build](https://github.com/rgburke/grv/actions/workflows/build.yml/badge.svg)](https://github.com/rgburke/grv/actions/workflows/build.yml)
 
 GRV is a terminal based interface for viewing Git repositories. It allows
 refs, commits and diffs to be viewed, searched and filtered. The behaviour
@@ -86,7 +86,7 @@ brew install readline pkgconf cmake
 To build and install GRV run:
 
 ```
-git clone https://github.com/r4d1um/grv.git
+git clone https://github.com/rgburke/grv.git
 cd grv
 make install
 ```
