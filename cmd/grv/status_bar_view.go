@@ -329,7 +329,7 @@ func (statusBarView *StatusBarView) RenderHelpBar(lineBuilder *LineBuilder) (err
 	}
 
 	if message != "" {
-		lineBuilder.AppendWithStyle(CmpHelpbarviewSpecial, message)
+		lineBuilder.AppendWithStyle(CmpHelpbarviewSpecial, "%v", message)
 	}
 
 	return

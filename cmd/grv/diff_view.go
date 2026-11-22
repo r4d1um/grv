@@ -272,7 +272,7 @@ func (diffView *DiffView) Render(win RenderWindow) (err error) {
 			if section.char != 0 {
 				lineBuilder.AppendACSChar(section.char, section.themeComponentID)
 			} else {
-				lineBuilder.AppendWithStyle(section.themeComponentID, section.text)
+				lineBuilder.AppendWithStyle(section.themeComponentID, "%v", section.text)
 			}
 		}
 
