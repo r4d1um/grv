@@ -141,7 +141,14 @@ jobs:
       - name: Build and test
         run: |
           cd "$(go env GOPATH)/src/github.com/rgburke/grv"
-          make grv
+          make apply-patches
+          # The zlib bundled in libgit2 v0.27 redefines fdopen on macOS, which clashes with current SDK headers
+          ZUTIL=cmd/grv/vendor/gopkg.in/libgit2/git2go.v27/vendor/libgit2/deps/zlib/zutil.h
+          perl -pi -e 's/defined\(MACOS\) \|\| defined\(TARGET_OS_MAC\)/defined(MACOS)/' "$ZUTIL"
+          if grep -n 'TARGET_OS_MAC' "$ZUTIL"; then
+            echo "::error::zlib fdopen patch did not apply"; exit 1
+          fi
+          make build-only
           go test --tags static ./cmd/grv
 
       - name: Inspect binary
