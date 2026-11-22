@@ -1,4 +1,6 @@
-# GRV - Git Repository Viewer [![Build Status](https://travis-ci.org/rgburke/grv.svg?branch=master)](https://travis-ci.org/rgburke/grv)
+# GRV - Git Repository Viewer [![Build](https://github.com/r4d1um/grv/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/r4d1um/grv/actions/workflows/build.yml)
+
+> This is a maintained fork of [rgburke/grv](https://github.com/rgburke/grv). Releases and issues: [r4d1um/grv](https://github.com/r4d1um/grv).
 
 GRV is a terminal based interface for viewing Git repositories. It allows
 refs, commits and diffs to be viewed, searched and filtered. The behaviour
@@ -30,16 +32,21 @@ Documentation for GRV is available [here](doc/documentation.md)
 
 ### Linux
 
-Static binaries are available for Linux. For example, to use
+Static binaries are available for Linux on the
+[releases page](https://github.com/r4d1um/grv/releases). For example, to use
 the amd64 binary run the following steps:
 
 ```
-wget -O grv https://github.com/rgburke/grv/releases/download/v0.3.2/grv_v0.3.2_linux64
+wget -O grv https://github.com/r4d1um/grv/releases/download/v0.3.3/grv_v0.3.3_linux64
 chmod +x ./grv
 ./grv -repoFilePath /path/to/repo
 ```
 
 ### Mac
+
+**Note:** the Homebrew and FreeBSD packages below are built from upstream
+[rgburke/grv](https://github.com/rgburke/grv), not from this fork. To run this
+fork on macOS, build it from source (see below).
 
 GRV is available in homebrew and can be installed with:
 
@@ -76,13 +83,17 @@ Building GRV on OSX requires homebrew, and for `readline`, `pkg-config`, and `cm
 brew install readline pkg-config cmake
 ```
 
-To install GRV run:
+To install GRV from this fork run:
 
 ```
-go get -d github.com/rgburke/grv/cmd/grv
+git clone https://github.com/r4d1um/grv $GOPATH/src/github.com/rgburke/grv
 cd $GOPATH/src/github.com/rgburke/grv
 make install
 ```
+
+The checkout has to live under `github.com/rgburke/grv` in your `GOPATH`,
+because that is the project's Go import path (it builds in legacy GOPATH mode,
+`GO111MODULE=off`).
 
 To install grv with an alternative binary name change the last step to:
 
