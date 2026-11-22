@@ -8,6 +8,11 @@ on:
   pull_request:
     paths-ignore: ["**.md", "LICENSE"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag and release this commit (e.g. v0.3.3); leave empty for a plain build"
+        required: false
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,6 +35,19 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+
+      - name: Tag commit for manual release
+        if: inputs.release_tag != ''
+        env:
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::release_tag must look like v1.2.3, got '$TAG'"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::tag $TAG already exists"; exit 1
+          fi
+          git tag "$TAG" "$GITHUB_SHA"
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -69,10 +87,10 @@ jobs:
           make static
 
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           SRC="$(go env GOPATH)/src/github.com/rgburke/grv"
           ASSET="grv_${TAG}_linux64"
@@ -81,5 +99,6 @@ jobs:
           sha256sum "$ASSET" > "$ASSET.sha256"
           gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "$TAG" \
             --generate-notes
