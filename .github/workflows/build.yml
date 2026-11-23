@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Tag and release this commit (e.g. v0.3.3); leave empty for a plain build"
+        description: "Tag and release this commit (e.g. v0.3.4); leave empty for a plain build"
         required: false
         default: ""
 
@@ -25,8 +25,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    permissions:
-      contents: write
     env:
       GO111MODULE: "off"
     steps:
@@ -47,6 +45,7 @@ jobs:
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             echo "::error::tag $TAG already exists"; exit 1
           fi
+          # local only, so `git describe` puts the version into the binary; the release job creates the real tag
           git tag "$TAG" "$GITHUB_SHA"
 
       - name: Set up Go
@@ -85,23 +84,15 @@ jobs:
           cd "$(go env GOPATH)/src/github.com/rgburke/grv"
           make clean
           make static
+          ./grv -version
+          cp grv "$GITHUB_WORKSPACE/grv_linux64"
 
-      - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag || github.ref_name }}
-        run: |
-          SRC="$(go env GOPATH)/src/github.com/rgburke/grv"
-          ASSET="grv_${TAG}_linux64"
-          cp "$SRC/grv" "$ASSET"
-          ./"$ASSET" -version
-          sha256sum "$ASSET" > "$ASSET.sha256"
-          gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "$TAG" \
-            --generate-notes
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: grv_linux64
+          path: grv_linux64
+          retention-days: 7
 
   build-macos:
     runs-on: macos-15
@@ -116,6 +107,13 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+
+      - name: Tag commit for manual release
+        if: inputs.release_tag != ''
+        env:
+          TAG: ${{ inputs.release_tag }}
+        # local only, so `git describe` puts the version into the binary; validated in the build job
+        run: git tag "$TAG" "$GITHUB_SHA"
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -156,12 +154,52 @@ jobs:
           cd "$(go env GOPATH)/src/github.com/rgburke/grv"
           file grv
           otool -L grv
+          # only system libraries and Homebrew's readline/ncurses, which the formula depends on
+          if otool -L grv | tail -n +2 | awk '{print $1}' \
+              | grep -vE '^/usr/lib/|^/System/|^/opt/homebrew/opt/(readline|ncurses)/'; then
+            echo "::error::unexpected dynamic library dependency"; exit 1
+          fi
           ./grv -version
           cp grv "$GITHUB_WORKSPACE/grv_darwin_arm64"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: grv_darwin_arm64
           path: grv_darwin_arm64
           retention-days: 7
+
+  release:
+    needs: [build, build-macos]
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          cd dist
+          assets=()
+          for platform in linux64 darwin_arm64; do
+            asset="grv_${TAG}_${platform}"
+            mv "grv_${platform}" "$asset"
+            chmod +x "$asset"
+            sha256sum "$asset" > "$asset.sha256"
+            assets+=("$asset" "$asset.sha256")
+          done
+          cat ./*.sha256
+          gh release create "$TAG" "${assets[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes
