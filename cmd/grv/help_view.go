@@ -97,7 +97,7 @@ func (helpSection *HelpSection) renderDescription(win RenderWindow, winStartRowI
 			spacing += "  "
 		}
 
-		lineBuilder.Append(spacing).AppendWithStyle(themeComponentID, "%v", descriptionLine.text)
+		lineBuilder.Append("%v", spacing).AppendWithStyle(themeComponentID, "%v", descriptionLine.text)
 	}
 
 	return

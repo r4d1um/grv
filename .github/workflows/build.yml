@@ -102,3 +102,66 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "$TAG" \
             --generate-notes
+
+  build-macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      GO111MODULE: "off"
+      # libgit2 v0.27 declares an ancient cmake_minimum_required; CMake 4 needs this to configure it
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+          cache: false
+
+      - name: Install native dependencies
+        run: |
+          brew install cmake pkg-config readline ncurses
+          {
+            echo "PKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig:$(brew --prefix readline)/lib/pkgconfig"
+            echo "CGO_CFLAGS=-I$(brew --prefix ncurses)/include -I$(brew --prefix readline)/include"
+            echo "CGO_LDFLAGS=-L$(brew --prefix ncurses)/lib -L$(brew --prefix readline)/lib"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare legacy GOPATH workspace
+        run: |
+          GOPATH_DIR="$(go env GOPATH)"
+          mkdir -p "$GOPATH_DIR/src/github.com/rgburke"
+          cp -a "$GITHUB_WORKSPACE" "$GOPATH_DIR/src/github.com/rgburke/grv"
+
+      - name: Build and test
+        run: |
+          cd "$(go env GOPATH)/src/github.com/rgburke/grv"
+          make apply-patches
+          # The zlib bundled in libgit2 v0.27 redefines fdopen on macOS, which clashes with current SDK headers
+          ZUTIL=cmd/grv/vendor/gopkg.in/libgit2/git2go.v27/vendor/libgit2/deps/zlib/zutil.h
+          perl -pi -e 's/defined\(MACOS\) \|\| defined\(TARGET_OS_MAC\)/defined(MACOS)/' "$ZUTIL"
+          if grep -n 'TARGET_OS_MAC' "$ZUTIL"; then
+            echo "::error::zlib fdopen patch did not apply"; exit 1
+          fi
+          make build-only
+          go test --tags static ./cmd/grv
+
+      - name: Inspect binary
+        run: |
+          cd "$(go env GOPATH)/src/github.com/rgburke/grv"
+          file grv
+          otool -L grv
+          ./grv -version
+          cp grv "$GITHUB_WORKSPACE/grv_darwin_arm64"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v5
+        with:
+          name: grv_darwin_arm64
+          path: grv_darwin_arm64
+          retention-days: 7
